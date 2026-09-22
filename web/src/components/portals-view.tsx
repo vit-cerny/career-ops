@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Loader2, Radar, Wrench } from "lucide-react";
 import { CompanyLogo } from "@/components/company-logo";
+import { ScanTargets } from "@/components/scan-targets";
 import { useJobs, type Job } from "@/components/jobs/job-store";
 import { cn } from "@/lib/cn";
 
@@ -50,7 +51,9 @@ export function PortalsView() {
 
   return (
     <div>
-      <div className="flex items-center gap-3">
+      <ScanTargets />
+
+      <div className="mt-8 flex items-center gap-3">
         <button
           onClick={check}
           disabled={loading}
