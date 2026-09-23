@@ -17,14 +17,9 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Runtime settings the CLI/agent actually reads:
-//   - AI model  -> opencode.json (top-level `model` / `small_model`)
-//   - API keys  -> .env (repo root, gitignored; doctor.mjs loads it)
-//   - browser   -> a managed block in modes/_custom.md (ALWAYS read per
-//                  modes/_shared.md), so the agent honours the choice
-// Reads are live; writes are merge-safe + atomic and never clobber the rest of
-// the file. A key VALUE never travels back to the browser - GET returns
-// booleans only.
+// Writes the three files the runtime reads: opencode.json (model), .env (keys,
+// gitignored) and the browser block in modes/_custom.md. A key VALUE never
+// travels back to the browser - GET returns booleans only.
 
 const OPENCODE_FILE = "opencode.json";
 const ENV_FILE = ".env";

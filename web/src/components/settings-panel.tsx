@@ -25,10 +25,6 @@ const BROWSER_HINTS: Record<string, string> = {
   jev: "Drives a real Chrome through the jev MCP. Needs the jev MCP enabled in opencode.",
 };
 
-// Runtime settings the CLI/agent actually reads. Server-persisted (unlike the
-// localStorage engine prefs above) because opencode.json, .env and
-// modes/_custom.md are the files the runtime loads - the CLI and the web must
-// agree. A key VALUE never comes back from the server; only set/unset.
 export function SettingsPanel() {
   const [loaded, setLoaded] = useState<Settings | null>(null);
   const [model, setModel] = useState("");

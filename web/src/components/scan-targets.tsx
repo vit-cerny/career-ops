@@ -28,10 +28,6 @@ function entryKey(e: Entry): string {
   return `${e.list}:${e.name}`;
 }
 
-// Editor for the parts of portals.yml the web owns: which portals are scanned
-// (the per-entry `enabled` flag) and what the scanner looks for (title +
-// location filters). Server-persisted because scan.mjs reads the same file -
-// the web and the CLI must agree. Everything else in portals.yml is preserved.
 export function ScanTargets() {
   const [state, setState] = useState<State | null>(null);
   const [roles, setRoles] = useState("");

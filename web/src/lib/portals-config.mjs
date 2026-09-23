@@ -120,8 +120,7 @@ function readEntries(doc) {
 }
 
 /**
- * Read the filter blocks and the per-entry enabled flags the Portals page
- * shows. Read-only projection - nothing here writes.
+ * Read-only projection of the filter blocks and entry flags the Portals page shows.
  *
  * @param {Record<string, unknown>} doc
  */
@@ -145,11 +144,7 @@ export function readPortalsSettings(doc) {
 }
 
 /**
- * Merge-safe writer for everything the Portals page owns: the four location
- * tiers, the three title tiers, and the per-entry `enabled` flag on
- * tracked_companies / job_boards / search_queries (matched by `name`). Every
- * other field on an entry, and every other block in the document, is
- * preserved. The input document is never mutated.
+ * Merge-safe writer for the filter tiers and entry flags; the input is not mutated.
  *
  * @param {Record<string, unknown>} doc
  * @param {{ title?: Record<string, string[]>, location?: Record<string, string[]>, enabled?: { list: string, name: string, value: boolean }[] }} settings

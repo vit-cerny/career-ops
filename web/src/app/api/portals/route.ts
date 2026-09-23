@@ -12,15 +12,9 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Merge-safe reader/writer for the parts of portals.yml the web owns: the
-// title and location filter tiers, and the per-entry `enabled` flag on
-// tracked_companies / job_boards / search_queries. Everything else - every
-// other block, every other field on an entry - is preserved. Seeds from
-// templates/portals.example.yml on first create; a portals.yml that EXISTS but
-// cannot be parsed is a 409, never overwritten. Atomic write.
-//
-// The legacy `{ roles, location }` body (used by the assistant's confirm-gated
-// setPortals action) still works unchanged.
+// Merge-safe reader/writer for the parts of portals.yml the web owns: the title
+// and location filter tiers and the per-entry `enabled` flag. Everything else is
+// preserved. The legacy `{ roles, location }` body still works unchanged.
 
 const LIST_KEYS = ["tracked_companies", "job_boards", "search_queries"];
 const TITLE_KEYS = ["positive", "negative", "seniority_boost"];

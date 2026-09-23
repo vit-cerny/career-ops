@@ -1,38 +1,9 @@
 import fs from "node:fs";
 
-/**
- * Pure helpers behind the web Config page's runtime settings.
- *
- * Three settings, three different homes - each one chosen because it is the
- * file the runtime ACTUALLY reads:
- *   - AI model     -> opencode.json  (top-level `model` / `small_model`)
- *   - API keys     -> .env           (repo root, gitignored; doctor.mjs loads it)
- *   - browser      -> a managed block in modes/_custom.md (the agent-read
- *                     house-rule file that modes/_shared.md says is ALWAYS read)
- *
- * No IO beyond the read helpers; the route owns every write. Keeping the merge
- * logic pure is what lets `node --test` assert it (web/AGENTS.md: "a component
- * is not a place to put a rule you want to assert").
- */
-
-/** @param {unknown} value */
-export function isMapping(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
-}
-
-/** Selectable browser backends. `laya` is the local/offline engine; `jev` the MCP. */
 export const BROWSER_BACKENDS = ["laya", "jev"];
-
-/** Laya is local (no key, no network) - the sane default. */
 export const DEFAULT_BROWSER = "laya";
-
-/** Markers delimiting the managed block in modes/_custom.md. */
 export const MANAGED_BEGIN = "<!-- co-web:browser -->";
 export const MANAGED_END = "<!-- /co-web:browser -->";
-
-/** AI-provider keys the Config page can write to .env. */
 export const KEY_NAMES = [
   "OPENROUTER_API_KEY",
   "OPENAI_API_KEY",
@@ -40,16 +11,17 @@ export const KEY_NAMES = [
   "GEMINI_API_KEY",
 ];
 
-/** @param {string} s */
+export function isMapping(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
 function escapeRe(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /**
- * Read opencode.json. A missing file is not an error (fresh checkout); a file
- * that exists but is not parseable IS - the caller must 409 rather than
- * overwrite a config the user hand-edited.
- *
  * @param {string} file
  * @returns {{ doc: Record<string, unknown>, missing: boolean }}
  */
@@ -68,7 +40,9 @@ export function readOpencodeConfig(file) {
   return { doc: parsed, missing: false };
 }
 
-/** @param {Record<string, unknown>} doc */
+/**
+ * @param {Record<string, unknown>} doc
+ */
 export function readModel(doc) {
   return {
     model: typeof doc.model === "string" ? doc.model : "",
@@ -76,11 +50,6 @@ export function readModel(doc) {
   };
 }
 
-/**
- * @param {Record<string, unknown>} doc
- * @param {string | undefined} model
- * @param {string | undefined} smallModel
- */
 export function mergeOpencodeModel(doc, model, smallModel) {
   const merged = { ...doc };
   if (model) merged.model = model;
@@ -89,39 +58,25 @@ export function mergeOpencodeModel(doc, model, smallModel) {
 }
 
 /**
- * Which of the known keys are set to a non-empty value. Returns booleans only -
- * a key value must never travel back to the browser.
- *
  * @param {string} text
  * @returns {Record<string, boolean>}
  */
 export function readEnvKeys(text) {
-  /** @type {Record<string, boolean>} */
   const set = {};
   for (const line of text.split(/\r?\n/)) {
     const m = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
     if (!m) continue;
-    // trim -> strip quotes -> trim again, so `KEY="  "` counts as unset.
     const value = m[2].trim().replace(/^["']|["']$/g, "").trim();
     if (value !== "") set[m[1]] = true;
   }
   return set;
 }
 
-/** @param {string} v */
 function envValue(v) {
-  // dotenv strips an unquoted trailing `#comment`, so quote anything with
-  // whitespace, a quote, or a `#`.
+  // dotenv strips an unquoted trailing `#comment`, so quote anything that has one.
   return /[\s#"']/.test(v) ? JSON.stringify(v) : v;
 }
 
-/**
- * Upsert KEY=value pairs into an .env text, preserving every other line
- * (comments, blank lines, unrelated keys) and line order.
- *
- * @param {string} text
- * @param {Record<string, string>} values
- */
 export function mergeEnvText(text, values) {
   const lines = text.length ? text.split(/\r?\n/) : [];
   const seen = new Set();
@@ -139,13 +94,6 @@ export function mergeEnvText(text, values) {
   return out.join("\n").replace(/\n{3,}/g, "\n\n").replace(/\s*$/, "") + "\n";
 }
 
-/**
- * The house rule the agent reads every session. Written in the same voice as
- * the rule it replaces, and deliberately explicit that a failed fetch is a
- * failure - never a fabricated page.
- *
- * @param {string} backend
- */
 export function browserRule(backend) {
   if (backend === "jev") {
     return [
@@ -166,32 +114,17 @@ export function browserRule(backend) {
   ].join("\n");
 }
 
-/**
- * Read the chosen backend out of the managed block, falling back to the
- * default when the block is absent or names nothing we recognise.
- *
- * @param {string} customText
- */
 export function readBrowserBackend(customText) {
   const re = new RegExp(`${escapeRe(MANAGED_BEGIN)}([\\s\\S]*?)${escapeRe(MANAGED_END)}`);
   const match = re.exec(customText);
   if (!match) return DEFAULT_BROWSER;
-  // Read the explicit marker line, NOT a word search: both rule texts mention
-  // the other backend by name (the fallback), so matching on words is
-  // ambiguous and would always resolve to whichever is listed first.
+  // Read the explicit marker, not a word search: both rule texts name the other
+  // backend as the fallback, so a word match always resolves to whichever is first.
   const marker = /^[-*]\s*Backend:\s*([A-Za-z-]+)\s*$/m.exec(match[1]);
   const found = marker && BROWSER_BACKENDS.find((b) => b === marker[1].toLowerCase());
   return found ?? DEFAULT_BROWSER;
 }
 
-/**
- * Insert or replace the managed block, leaving the user's own house rules
- * untouched. Mirrors the marker-block contract already used for
- * modes/_profile.md notes.
- *
- * @param {string} text
- * @param {string} backend
- */
 export function upsertBrowserBlock(text, backend) {
   const block = `${MANAGED_BEGIN}\n- Backend: ${backend}\n${browserRule(backend)}\n${MANAGED_END}`;
   const re = new RegExp(`${escapeRe(MANAGED_BEGIN)}[\\s\\S]*?${escapeRe(MANAGED_END)}`);
